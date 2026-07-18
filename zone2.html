@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>ZONE 2</title>
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --fg:#FFFFFF;
+    --muted:#8E8E93;
+    --accent:#FF3B30;
+    --border:#2A2A2A;
+    --surface:#1A1A1A;
+    --surface2:#3A3A3A;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--sans);
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button,input{font-family:inherit;}
+  button{cursor:pointer;background:none;color:inherit;}
+  .hidden{display:none !important;}
+
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+
+  .screen{display:none;min-height:100vh;}
+  .screen.active{display:block;}
+  #screen-gate.active, #screen-brief.active{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:32px;text-align:center;gap:28px;
+  }
+
+  .brief-text{font-size:1.05rem;line-height:1.8;color:var(--fg);max-width:340px;}
+
+  .btn-primary{
+    border:1px solid var(--fg);
+    color:var(--fg);
+    background:transparent;
+    padding:14px 44px;
+    font-weight:600;
+    font-size:0.85rem;
+    letter-spacing:0.12em;
+    border-radius:0;
+    transition:border-color .15s,color .15s;
+  }
+  .btn-primary:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* gate lock (reused pattern from index.html's box locks) */
+  .lock{border:1px solid var(--border);padding:16px;width:100%;max-width:300px;}
+  .lock-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+  .lock-row{display:flex;gap:8px;}
+  .lock-input{
+    flex:1;background:transparent;border:1px solid var(--border);color:var(--fg);
+    padding:10px 12px;font-family:var(--mono);font-size:0.95rem;letter-spacing:0.04em;
+    border-radius:0;
+  }
+  .lock-input:focus{outline:none;border-color:var(--fg);}
+  .lock-icon{
+    width:44px;flex-shrink:0;border:1px solid var(--border);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lock-icon svg{width:18px;height:18px;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+  .lock.shake .lock-row{animation:shake .4s;}
+  .lock.shake .lock-input{border-color:var(--accent);}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  /* image / hunt screen */
+  #screen-image{padding:76px 16px 40px;}
+  .evidence-bar{
+    position:fixed;top:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:14px 16px;background:var(--bg);border-bottom:1px solid var(--border);
+    z-index:1000;
+  }
+  .evidence-label{font-family:var(--mono);font-size:0.78rem;color:var(--muted);letter-spacing:0.04em;}
+  .evidence-label span{color:var(--fg);font-weight:600;}
+  .evidence-code{font-family:var(--mono);font-size:0.9rem;color:var(--accent);letter-spacing:0.2em;font-weight:600;}
+  .known-facts-toggle{
+    border:1px solid var(--border);color:var(--muted);background:transparent;
+    padding:6px 10px;font-size:0.65rem;letter-spacing:0.05em;flex-shrink:0;
+  }
+
+  .known-facts-panel{
+    border:1px solid var(--border);background:var(--surface);
+    padding:14px 16px;margin-bottom:16px;
+  }
+  .kf-label{color:var(--muted);font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 8px;}
+  .kf-text{margin:0 0 6px;font-size:0.8rem;line-height:1.5;color:var(--fg);}
+  .kf-text:last-child{margin-bottom:0;}
+
+  .zoom-viewport{
+    border:1px solid var(--border);height:58vh;min-height:360px;overflow:hidden;position:relative;
+    touch-action:none;background:var(--surface);margin-bottom:16px;cursor:grab;
+  }
+  .zoom-content{transform-origin:center center;will-change:transform;padding:16px;}
+
+  .fp-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .fp-avatar{
+    width:36px;height:36px;border-radius:50%;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+    font-size:0.65rem;color:var(--muted);flex-shrink:0;
+  }
+  .fp-username{font-weight:600;font-size:0.85rem;}
+  .fp-meta{font-size:0.7rem;color:var(--muted);}
+
+  .fp-dm-wrap{border:1px solid var(--border);background:var(--bg);margin-bottom:14px;}
+  .fp-phone-bar{
+    display:flex;justify-content:space-between;padding:6px 10px;
+    font-family:var(--mono);font-size:0.65rem;color:var(--muted);
+    border-bottom:1px solid var(--border);
+  }
+  .fp-dm-header{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:10px 10px 8px;border-bottom:1px solid var(--border);gap:8px;
+  }
+  .fp-dm-name{font-weight:600;font-size:0.85rem;}
+  .fp-dm-followers{font-size:0.66rem;color:var(--muted);white-space:nowrap;}
+  .fp-dm-thread{display:flex;flex-direction:column;gap:8px;padding:12px 10px;}
+  .fp-bubble{
+    max-width:80%;padding:8px 10px;font-size:0.78rem;line-height:1.4;
+    border:1px solid var(--border);
+  }
+  .fp-bubble-in{align-self:flex-start;background:var(--surface);}
+  .fp-bubble-out{align-self:flex-end;background:var(--surface2);text-align:right;}
+  .fp-bubble-time{display:inline-block;margin-top:4px;font-size:0.62rem;color:var(--muted);font-family:var(--mono);}
+
+  .fp-caption{font-size:0.8rem;line-height:1.5;margin:0 0 14px;}
+  .fp-username-inline{font-weight:600;margin-right:4px;}
+
+  .fp-comments{border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .fp-comment{font-size:0.76rem;line-height:1.4;}
+  .fp-comment-user{font-weight:600;margin-right:4px;}
+
+  .hotspot{cursor:default;position:relative;}
+  .hotspot.found{pointer-events:none;outline:1px solid var(--accent);outline-offset:2px;}
+  .hotspot.found::before{
+    content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    width:6px;height:6px;background:var(--accent);border-radius:50%;
+  }
+
+  .explanation-area{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .explanation-line{
+    font-size:0.8rem;line-height:1.5;color:var(--fg);
+    border-left:2px solid var(--accent);padding-left:10px;
+    opacity:0;animation:fadeIn .5s ease forwards;
+  }
+
+  /* payoff */
+  #screen-payoff{padding:56px 16px 60px;min-height:100vh;}
+  .closing-view{
+    min-height:calc(100vh - 116px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:20px;padding:20px 8px;
+  }
+  .closing-line{opacity:0;animation:fadeIn .8s ease forwards;max-width:320px;font-size:1rem;line-height:1.6;margin:0;}
+  .line-1{animation-delay:.2s;}
+  .line-2{animation-delay:1.2s;}
+  .line-3{animation-delay:2.2s;font-weight:600;}
+  .line-4{animation-delay:3.6s;font-size:0.9rem;color:var(--muted);}
+  .line-5{animation-delay:4.8s;font-weight:600;}
+  .code-display{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:5.6s;
+    font-family:var(--mono);font-size:0.9rem;color:var(--muted);margin:8px 0 0;letter-spacing:0.1em;
+  }
+  .code-value{
+    display:block;font-size:clamp(2.5rem,22vw,200px);color:var(--accent);font-weight:600;
+    letter-spacing:0.12em;margin-top:6px;line-height:1;
+  }
+  .key-box{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:7.4s;
+    border:1px solid var(--accent);color:var(--accent);background:transparent;
+    padding:16px 24px;font-weight:600;font-size:0.85rem;letter-spacing:0.08em;
+    max-width:280px;text-align:center;margin-top:8px;
+  }
+  .key-heading{font-size:0.75rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin:0;}
+  .key-value{
+    font-family:var(--mono);font-size:1.8rem;font-weight:600;color:var(--accent);
+    letter-spacing:0.1em;margin:0;
+  }
+  .reset-note{font-size:0.78rem;color:var(--muted);font-family:var(--mono);margin:0;}
+  #password-view #btn-run-again{margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <section id="screen-gate" class="screen active">
+    <p class="brief-text">ZONE 2 IS LOCKED.<br><br>Enter the key from Stage 1 to continue.</p>
+    <div class="lock" id="gate-lock">
+      <div class="lock-label">STAGE 1 KEY</div>
+      <div class="lock-row">
+        <input type="text" class="lock-input" id="gate-input" placeholder="enter key" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" id="gate-submit" aria-label="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-brief" class="screen">
+    <p class="brief-text">Someone posted this about Rachel. 40,000 people have seen it.<br><br>It isn't real.<br><br>Prove it. Find three things wrong.</p>
+    <button id="btn-start" class="btn-primary">START</button>
+  </section>
+
+  <section id="screen-image" class="screen">
+    <div class="evidence-bar">
+      <span class="evidence-label">EVIDENCE <span id="evidence-count">0</span>/3</span>
+      <span class="evidence-code" id="evidence-code">_ _ _</span>
+      <button type="button" id="btn-known-facts" class="known-facts-toggle">KNOWN FACTS</button>
+    </div>
+
+    <div id="known-facts-panel" class="known-facts-panel hidden">
+      <p class="kf-label">Verified — Stage 1</p>
+      <p class="kf-text">Rachel's account: 1,204 followers, checked today.</p>
+      <p class="kf-text">This post claims to be from two years ago.</p>
+    </div>
+
+    <div class="zoom-viewport" id="zoom-viewport">
+      <div class="zoom-content" id="zoom-content">
+        <div class="fp-header">
+          <div class="fp-avatar">SC</div>
+          <div>
+            <div class="fp-username">@sgpolyconfess</div>
+            <div class="fp-meta">2h &middot; 40.2K views</div>
+          </div>
+        </div>
+
+        <div class="fp-dm-wrap">
+          <div class="fp-phone-bar">
+            <span>9:12</span>
+            <span>••• 5G ▮</span>
+          </div>
+          <div class="fp-dm-header">
+            <span class="fp-dm-name hotspot" id="hotspot-3"><span style="letter-spacing:0.02em;">R</span><span style="letter-spacing:0.18em;">a</span><span style="letter-spacing:0.01em;">c</span><span style="letter-spacing:0.16em;">h</span><span style="letter-spacing:0em;">e</span><span style="letter-spacing:0.12em;">l</span> <span style="letter-spacing:0.2em;">T</span><span style="letter-spacing:0.02em;">a</span><span>n</span></span>
+            <span class="fp-dm-followers hotspot" id="hotspot-2">1,204 followers</span>
+          </div>
+          <div class="fp-dm-thread">
+            <div class="fp-bubble fp-bubble-in">wait explain this transfer from the group fund</div>
+            <div class="fp-bubble fp-bubble-out">
+              it's not what it looks like, i can explain
+              <span class="fp-bubble-time hotspot" id="hotspot-1">11:47 PM</span>
+            </div>
+            <div class="fp-bubble fp-bubble-in">so you DID take it</div>
+          </div>
+        </div>
+
+        <p class="fp-caption"><span class="fp-username-inline">sgpolyconfess</span>so this is what she's been doing with our money</p>
+
+        <div class="fp-comments">
+          <div class="fp-comment"><span class="fp-comment-user">@weiling.t</span>wow can't believe this</div>
+          <div class="fp-comment"><span class="fp-comment-user">@danielsoh</span>knew something was off</div>
+          <div class="fp-comment"><span class="fp-comment-user">@jiaqi_</span>this is so messed up</div>
+          <div class="fp-comment"><span class="fp-comment-user">@nurulhda</span>deadass thought she was cool</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="explanation-area" id="explanation-area"></div>
+
+    <button type="button" id="btn-hunt-continue" class="btn-primary hidden">CONTINUE</button>
+  </section>
+
+  <section id="screen-payoff" class="screen">
+    <div id="payoff-view" class="closing-view">
+      <p class="closing-line line-1">It took you four minutes to prove this was fake.</p>
+      <p class="closing-line line-2">40,000 people shared it in two hours.</p>
+      <p class="closing-line line-3">Nobody checked.</p>
+      <p class="closing-line line-4">You are not going to fact-check every post you see. Neither is anyone else.</p>
+      <p class="closing-line line-5">That is what makes this work.</p>
+      <p class="code-display">CODE<span class="code-value">LIE</span></p>
+      <button type="button" id="btn-get-key" class="key-box">GET THE KEY FOR THE NEXT STAGE</button>
+    </div>
+
+    <div id="password-view" class="closing-view hidden">
+      <p class="key-heading">STAGE KEY</p>
+      <p class="key-value">TYWAJF</p>
+      <p class="reset-note">Resets in <span id="reset-countdown">1:00</span></p>
+      <button id="btn-run-again" class="btn-primary">RUN IT AGAIN</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var state = { resetTimerId:null, resetRemaining:60 };
+
+  var HOTSPOTS = {
+    "hotspot-1": { letter:"L", explanation:"The DM timestamp reads 11:47 PM, but the phone's status bar in the same screenshot reads 9:12. Both can't be true in one screenshot." },
+    "hotspot-2": { letter:"I", explanation:"This follower count matches Rachel's account today, not two years ago — which is when this post claims it happened." },
+    "hotspot-3": { letter:"E", explanation:"Look at the letter spacing in “Rachel Tan.” It doesn't match any other name on screen. Text was pasted over the original." }
+  };
+  var CODE_ORDER = ["hotspot-1","hotspot-2","hotspot-3"];
+  var foundHotspots = {};
+
+  var zoomState = { scale:1, x:0, y:0 };
+  var pointers = new Map();
+  var gestureStartDist = null;
+  var gestureStartScale = 1;
+  var dragStart = null;
+  var movedDistance = 0;
+
+  function normalize(v){ return v.trim().toLowerCase().replace(/\s+/g,""); }
+
+  function fmtTime(totalSeconds){
+    var m = Math.floor(totalSeconds/60);
+    var s = totalSeconds%60;
+    return m+":"+(s<10?"0":"")+s;
+  }
+
+  function showScreen(name){
+    var all = document.querySelectorAll(".screen");
+    for(var i=0;i<all.length;i++){ all[i].classList.remove("active"); }
+    document.getElementById("screen-"+name).classList.add("active");
+  }
+
+  function submitGate(){
+    var input = document.getElementById("gate-input");
+    var val = normalize(input.value);
+    if(val === "xabcgh"){
+      showScreen("brief");
+    } else {
+      var wrap = document.getElementById("gate-lock");
+      wrap.classList.add("shake");
+      setTimeout(function(){ wrap.classList.remove("shake"); }, 400);
+      input.value = "";
+    }
+  }
+
+  function updateEvidence(){
+    var count = Object.keys(foundHotspots).length;
+    document.getElementById("evidence-count").textContent = count;
+    var display = CODE_ORDER.map(function(id){
+      return foundHotspots[id] ? HOTSPOTS[id].letter : "_";
+    }).join(" ");
+    document.getElementById("evidence-code").textContent = display;
+  }
+
+  function addExplanation(text){
+    var area = document.getElementById("explanation-area");
+    var p = document.createElement("p");
+    p.className = "explanation-line";
+    p.textContent = text;
+    area.appendChild(p);
+  }
+
+  function onHotspotClick(id){
+    if(foundHotspots[id]) return;
+    foundHotspots[id] = true;
+    document.getElementById(id).classList.add("found");
+    addExplanation(HOTSPOTS[id].explanation);
+    updateEvidence();
+    if(Object.keys(foundHotspots).length === CODE_ORDER.length){
+      document.getElementById("btn-hunt-continue").classList.remove("hidden");
+    }
+  }
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function clampScale(s){ return Math.min(3, Math.max(1, s)); }
+
+  function applyTransform(){
+    var content = document.getElementById("zoom-content");
+    content.style.transform = "translate("+zoomState.x+"px,"+zoomState.y+"px) scale("+zoomState.scale+")";
+  }
+
+  function clampPan(){
+    var viewport = document.getElementById("zoom-viewport");
+    var content = document.getElementById("zoom-content");
+    var vw = viewport.clientWidth, vh = viewport.clientHeight;
+    var cw = content.offsetWidth * zoomState.scale, ch = content.offsetHeight * zoomState.scale;
+    var maxX = Math.max(0, (cw - vw) / 2);
+    var maxY = Math.max(0, (ch - vh) / 2);
+    zoomState.x = Math.min(maxX, Math.max(-maxX, zoomState.x));
+    zoomState.y = Math.min(maxY, Math.max(-maxY, zoomState.y));
+  }
+
+  function initZoomPan(){
+    var viewport = document.getElementById("zoom-viewport");
+
+    viewport.addEventListener("pointerdown", function(e){
+      pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      movedDistance = 0;
+      if(pointers.size === 1){
+        dragStart = { px:e.clientX, py:e.clientY, ox:zoomState.x, oy:zoomState.y };
+      } else if(pointers.size === 2){
+        pointers.forEach(function(_, id){ viewport.setPointerCapture(id); });
+        var pts = Array.from(pointers.values());
+        gestureStartDist = dist(pts[0], pts[1]);
+        gestureStartScale = zoomState.scale;
+        dragStart = null;
+      }
+    });
+
+    viewport.addEventListener("pointermove", function(e){
+      if(!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+      if(pointers.size === 2 && gestureStartDist){
+        var pts = Array.from(pointers.values());
+        var d = dist(pts[0], pts[1]);
+        zoomState.scale = clampScale(gestureStartScale * (d / gestureStartDist));
+        clampPan();
+        applyTransform();
+        e.preventDefault();
+        return;
+      }
+
+      if(dragStart){
+        var dx = e.clientX - dragStart.px;
+        var dy = e.clientY - dragStart.py;
+        movedDistance = Math.max(movedDistance, Math.hypot(dx,dy));
+        if(movedDistance > 6){
+          e.preventDefault();
+          viewport.setPointerCapture(e.pointerId);
+          zoomState.x = dragStart.ox + dx;
+          zoomState.y = dragStart.oy + dy;
+          clampPan();
+          applyTransform();
+        }
+      }
+    });
+
+    function endPointer(e){
+      pointers.delete(e.pointerId);
+      if(pointers.size < 2){ gestureStartDist = null; }
+      if(pointers.size === 0){ dragStart = null; }
+    }
+    viewport.addEventListener("pointerup", endPointer);
+    viewport.addEventListener("pointercancel", endPointer);
+    viewport.addEventListener("pointerleave", endPointer);
+
+    viewport.addEventListener("wheel", function(e){
+      e.preventDefault();
+      var delta = -e.deltaY * 0.0015;
+      zoomState.scale = clampScale(zoomState.scale + zoomState.scale*delta);
+      clampPan();
+      applyTransform();
+    }, { passive:false });
+  }
+
+  function proceedToKey(){
+    document.getElementById("payoff-view").classList.add("hidden");
+    document.getElementById("password-view").classList.remove("hidden");
+    startResetCountdown();
+  }
+
+  function updateResetDisplay(){
+    document.getElementById("reset-countdown").textContent = fmtTime(state.resetRemaining);
+  }
+
+  function startResetCountdown(){
+    state.resetRemaining = 60;
+    updateResetDisplay();
+    state.resetTimerId = setInterval(function(){
+      state.resetRemaining -= 1;
+      updateResetDisplay();
+      if(state.resetRemaining <= 0){
+        clearInterval(state.resetTimerId);
+        state.resetTimerId = null;
+        resetAll();
+      }
+    }, 1000);
+  }
+
+  function resetAll(){
+    if(state.resetTimerId){
+      clearInterval(state.resetTimerId);
+      state.resetTimerId = null;
+    }
+    state.resetRemaining = 60;
+
+    foundHotspots = {};
+    CODE_ORDER.forEach(function(id){
+      document.getElementById(id).classList.remove("found");
+    });
+    document.getElementById("explanation-area").innerHTML = "";
+    document.getElementById("evidence-count").textContent = "0";
+    document.getElementById("evidence-code").textContent = "_ _ _";
+    document.getElementById("known-facts-panel").classList.add("hidden");
+    document.getElementById("btn-hunt-continue").classList.add("hidden");
+
+    zoomState = { scale:1, x:0, y:0 };
+    applyTransform();
+
+    document.getElementById("password-view").classList.add("hidden");
+    document.getElementById("payoff-view").classList.remove("hidden");
+    document.getElementById("reset-countdown").textContent = "1:00";
+
+    document.getElementById("gate-input").value = "";
+
+    showScreen("gate");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    initZoomPan();
+
+    document.getElementById("gate-submit").addEventListener("click", submitGate);
+    document.getElementById("gate-input").addEventListener("keydown", function(e){
+      if(e.key === "Enter") submitGate();
+    });
+
+    document.getElementById("btn-start").addEventListener("click", function(){ showScreen("image"); });
+
+    CODE_ORDER.forEach(function(id){
+      document.getElementById(id).addEventListener("click", function(){ onHotspotClick(id); });
+    });
+    document.getElementById("btn-known-facts").addEventListener("click", function(){
+      document.getElementById("known-facts-panel").classList.toggle("hidden");
+    });
+    document.getElementById("btn-hunt-continue").addEventListener("click", function(){ showScreen("payoff"); });
+
+    document.getElementById("btn-get-key").addEventListener("click", proceedToKey);
+    document.getElementById("btn-run-again").addEventListener("click", resetAll);
+
+    if(location.search.indexOf("reset") !== -1){
+      resetAll();
+    }
+  });
+})();
+</script>
+</body>
+</html>
