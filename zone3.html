@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>ZONE 3</title>
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --fg:#FFFFFF;
+    --muted:#8E8E93;
+    --accent:#FF3B30;
+    --border:#2A2A2A;
+    --surface:#1A1A1A;
+    --surface2:#3A3A3A;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--sans);
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button,input{font-family:inherit;}
+  button{cursor:pointer;background:none;color:inherit;}
+  .hidden{display:none !important;}
+
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+
+  .screen{display:none;min-height:100vh;}
+  .screen.active{display:block;}
+  #screen-gate.active, #screen-brief.active{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:32px;text-align:center;gap:28px;
+  }
+
+  .brief-text{font-size:1.05rem;line-height:1.8;color:var(--fg);max-width:340px;}
+
+  .btn-primary{
+    border:1px solid var(--fg);
+    color:var(--fg);
+    background:transparent;
+    padding:14px 44px;
+    font-weight:600;
+    font-size:0.85rem;
+    letter-spacing:0.12em;
+    border-radius:0;
+    transition:border-color .15s,color .15s;
+  }
+  .btn-primary:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* gate lock (reused pattern) */
+  .lock{border:1px solid var(--border);padding:16px;width:100%;max-width:300px;}
+  .lock-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+  .lock-row{display:flex;gap:8px;}
+  .lock-input{
+    flex:1;background:transparent;border:1px solid var(--border);color:var(--fg);
+    padding:10px 12px;font-family:var(--mono);font-size:0.95rem;letter-spacing:0.04em;
+    border-radius:0;
+  }
+  .lock-input:focus{outline:none;border-color:var(--fg);}
+  .lock-icon{
+    width:44px;flex-shrink:0;border:1px solid var(--border);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lock-icon svg{width:18px;height:18px;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+  .lock.shake .lock-row{animation:shake .4s;}
+  .lock.shake .lock-input{border-color:var(--accent);}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  /* report flow screen */
+  #screen-report{padding:32px 16px 40px;min-height:100vh;}
+  .report-step{}
+  #report-step-5{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:40px;}
+  #report-step-6{display:flex;flex-direction:column;align-items:center;text-align:center;gap:24px;padding-top:80px;}
+
+  .rp-post-preview{border:1px solid var(--border);padding:14px;}
+  .rp-post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .fp-avatar{
+    width:36px;height:36px;border-radius:50%;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+    font-size:0.65rem;color:var(--muted);flex-shrink:0;
+  }
+  .fp-username{font-weight:600;font-size:0.85rem;}
+  .fp-meta{font-size:0.7rem;color:var(--muted);}
+  .rp-dots{
+    margin-left:auto;border:1px solid var(--border);color:var(--muted);
+    padding:6px 10px;font-size:0.85rem;letter-spacing:0.15em;flex-shrink:0;
+  }
+  .fp-caption{font-size:0.8rem;line-height:1.5;margin:0;}
+  .fp-username-inline{font-weight:600;margin-right:4px;}
+
+  .report-header{display:flex;align-items:center;padding:0 0 14px;border-bottom:1px solid var(--border);margin-bottom:4px;position:relative;min-height:32px;}
+  .report-back{position:absolute;left:0;top:0;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s;}
+  .report-back:hover, .report-back:active{color:var(--fg);}
+  .report-back svg{width:16px;height:16px;}
+  .report-title-text{flex:1;text-align:center;font-weight:600;font-size:0.85rem;padding:0 32px;}
+  .report-list{display:flex;flex-direction:column;}
+  .report-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 8px;margin:0 -8px;border-bottom:1px solid var(--border);font-size:0.85rem;
+    cursor:pointer;transition:background-color .1s;
+  }
+  .report-row:hover{background:var(--surface);}
+  .report-row:active{background:var(--surface2);}
+  .report-chev{color:var(--muted);font-size:1rem;}
+
+  .rp-summary{font-size:0.85rem;color:var(--muted);margin:20px 0 6px;}
+  .rp-summary-value{font-size:1rem;font-weight:600;margin:0 0 24px;}
+
+  /* wait screen */
+  #screen-wait.active{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:28px;}
+  .wait-clock{font-family:var(--mono);font-size:2.8rem;font-weight:600;letter-spacing:0.05em;color:var(--fg);margin:0;}
+  .wait-message{opacity:0;animation:fadeIn .8s ease forwards;max-width:320px;font-size:1rem;line-height:1.6;margin:0;}
+  #btn-wait-continue{opacity:0;animation:fadeIn .8s ease forwards;animation-delay:.8s;}
+
+  /* escalation screen */
+  #screen-escalation.active{padding:56px 16px 60px;min-height:100vh;display:flex;flex-direction:column;align-items:center;text-align:center;gap:24px;justify-content:center;}
+  .esc-text{font-size:1.05rem;line-height:1.7;max-width:340px;margin:0;}
+  .esc-osc{border:1px solid var(--border);padding:18px;width:100%;max-width:340px;text-align:left;}
+  .esc-osc-title{font-weight:600;font-size:0.9rem;margin:0 0 8px;letter-spacing:0.04em;}
+  .esc-osc-sub{font-size:0.78rem;color:var(--muted);line-height:1.5;margin:0 0 16px;}
+  .esc-list{display:flex;flex-direction:column;gap:10px;}
+  .esc-item{display:flex;align-items:center;gap:10px;font-size:0.85rem;cursor:pointer;padding:4px 0;}
+  .esc-box{width:16px;height:16px;border:1px solid var(--border);flex-shrink:0;}
+  .esc-item.checked .esc-box{background:var(--accent);border-color:var(--accent);}
+  .esc-feedback{font-size:0.78rem;color:var(--muted);margin:14px 0 0;min-height:1.2em;}
+
+  /* payoff */
+  #screen-payoff{padding:56px 16px 60px;min-height:100vh;}
+  .closing-view{
+    min-height:calc(100vh - 116px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:20px;padding:20px 8px;
+  }
+  .closing-line{opacity:0;animation:fadeIn .8s ease forwards;max-width:320px;font-size:1rem;line-height:1.6;margin:0;}
+  .line-1{animation-delay:.2s;}
+  .line-2{animation-delay:1.2s;}
+  .line-3{animation-delay:2.2s;font-weight:600;}
+  .osc-permanent{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:3.2s;
+    border:1px solid var(--border);padding:16px;width:100%;max-width:300px;
+    text-align:left;font-size:0.78rem;line-height:1.6;color:var(--muted);
+  }
+  .osc-perm-title{color:var(--fg);font-weight:600;margin:0 0 8px;}
+  .osc-perm-text{margin:0 0 6px;}
+  .osc-perm-link{margin:8px 0 0;font-family:var(--mono);color:var(--accent);}
+  .key-box{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:4.2s;
+    border:1px solid var(--accent);color:var(--accent);background:transparent;
+    padding:16px 24px;font-weight:600;font-size:0.85rem;letter-spacing:0.08em;
+    max-width:280px;text-align:center;margin-top:8px;
+  }
+  .key-heading{font-size:0.75rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin:0;}
+  .key-value{
+    font-family:var(--mono);font-size:1.8rem;font-weight:600;color:var(--accent);
+    letter-spacing:0.1em;margin:0;
+  }
+  .reset-note{font-size:0.78rem;color:var(--muted);font-family:var(--mono);margin:0;}
+  #password-view #btn-run-again{margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <section id="screen-gate" class="screen active">
+    <p class="brief-text">ZONE 3 IS LOCKED.<br><br>Enter the key from Stage 2 to continue.</p>
+    <div class="lock" id="gate-lock">
+      <div class="lock-label">STAGE 2 KEY</div>
+      <div class="lock-row">
+        <input type="text" class="lock-input" id="gate-input" placeholder="enter key" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" id="gate-submit" aria-label="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-brief" class="screen">
+    <p class="brief-text">The post is still up. Rachel has asked it to be taken down twice.<br><br>Report it.</p>
+    <button id="btn-start" class="btn-primary">START</button>
+  </section>
+
+  <section id="screen-report" class="screen">
+    <div class="report-step" id="report-step-0">
+      <div class="rp-post-preview">
+        <div class="rp-post-header">
+          <div class="fp-avatar">SC</div>
+          <div>
+            <div class="fp-username">@sgpolyconfess</div>
+            <div class="fp-meta">2h &middot; 40.2K views</div>
+          </div>
+          <button type="button" class="rp-dots" id="rp-dots-btn" aria-label="more options">•••</button>
+        </div>
+        <p class="fp-caption"><span class="fp-username-inline">sgpolyconfess</span>so this is what she's been doing with our money</p>
+      </div>
+    </div>
+
+    <div class="report-step hidden" id="report-step-1">
+      <div class="report-header">
+        <button type="button" class="report-back" id="back-1" aria-label="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <span class="report-title-text">Report</span>
+      </div>
+      <div class="report-list">
+        <div class="report-row" id="opt-report">Report<span class="report-chev">›</span></div>
+        <div class="report-row">Copy Link<span class="report-chev">›</span></div>
+        <div class="report-row">Share to…<span class="report-chev">›</span></div>
+        <div class="report-row">About this Account<span class="report-chev">›</span></div>
+        <div class="report-row" id="opt-cancel">Cancel<span class="report-chev">›</span></div>
+      </div>
+    </div>
+
+    <div class="report-step hidden" id="report-step-2">
+      <div class="report-header">
+        <button type="button" class="report-back" id="back-2" aria-label="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <span class="report-title-text">Why are you reporting this post?</span>
+      </div>
+      <div class="report-list">
+        <div class="report-row">I just don't like it<span class="report-chev">›</span></div>
+        <div class="report-row">It's spam<span class="report-chev">›</span></div>
+        <div class="report-row">Nudity or sexual activity<span class="report-chev">›</span></div>
+        <div class="report-row" id="opt-something-account">Something about this account<span class="report-chev">›</span></div>
+        <div class="report-row">Hate speech or symbols<span class="report-chev">›</span></div>
+        <div class="report-row">False information<span class="report-chev">›</span></div>
+        <div class="report-row">Sale of illegal or regulated goods<span class="report-chev">›</span></div>
+        <div class="report-row">Suicide, self-harm or eating disorders<span class="report-chev">›</span></div>
+      </div>
+    </div>
+
+    <div class="report-step hidden" id="report-step-3">
+      <div class="report-header">
+        <button type="button" class="report-back" id="back-3" aria-label="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <span class="report-title-text">What's wrong with this account?</span>
+      </div>
+      <div class="report-list">
+        <div class="report-row">It's pretending to be someone else<span class="report-chev">›</span></div>
+        <div class="report-row">It's a duplicate account<span class="report-chev">›</span></div>
+        <div class="report-row" id="opt-content-type">It's posting content that shouldn't be on Instagram<span class="report-chev">›</span></div>
+        <div class="report-row">It doesn't represent a real person or business<span class="report-chev">›</span></div>
+        <div class="report-row">It's under the age of 13<span class="report-chev">›</span></div>
+      </div>
+    </div>
+
+    <div class="report-step hidden" id="report-step-4">
+      <div class="report-header">
+        <button type="button" class="report-back" id="back-4" aria-label="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <span class="report-title-text">What type of content is it?</span>
+      </div>
+      <div class="report-list">
+        <div class="report-row">Nudity or sexual activity<span class="report-chev">›</span></div>
+        <div class="report-row">Hate speech or symbols<span class="report-chev">›</span></div>
+        <div class="report-row">Violence or dangerous organizations<span class="report-chev">›</span></div>
+        <div class="report-row" id="opt-harassment">Harassment or bullying<span class="report-chev">›</span></div>
+        <div class="report-row">False information<span class="report-chev">›</span></div>
+        <div class="report-row">Scam or fraud<span class="report-chev">›</span></div>
+        <div class="report-row">Something else<span class="report-chev">›</span></div>
+      </div>
+    </div>
+
+    <div class="report-step hidden" id="report-step-5">
+      <div class="report-header"><span class="report-title-text">Submit report</span></div>
+      <p class="rp-summary">You're reporting this account for:</p>
+      <p class="rp-summary-value">Harassment or bullying</p>
+      <button type="button" id="btn-report-submit" class="btn-primary">Submit</button>
+    </div>
+
+    <div class="report-step hidden" id="report-step-6">
+      <p class="brief-text">Thanks for letting us know.<br><br>We'll review this.</p>
+      <button type="button" id="btn-report-continue" class="btn-primary">CONTINUE</button>
+    </div>
+  </section>
+
+  <section id="screen-wait" class="screen">
+    <p class="wait-clock" id="wait-clock">00:00</p>
+    <p class="wait-message hidden" id="wait-message">Reviewed. This doesn't go against our Community Guidelines.</p>
+    <button type="button" id="btn-wait-continue" class="btn-primary hidden">CONTINUE</button>
+  </section>
+
+  <section id="screen-escalation" class="screen">
+    <p class="esc-text">The platform is not the last step.<br>It was never the last step.</p>
+    <div class="esc-osc">
+      <p class="esc-osc-title">Online Safety Commission (OSC)</p>
+      <p class="esc-osc-sub">Opened 29 June 2026. Administered by IMDA. Handles five categories in phase one.</p>
+      <div class="esc-list" id="esc-list">
+        <div class="esc-item" data-correct="true"><span class="esc-box"></span>Online harassment</div>
+        <div class="esc-item" data-correct="false"><span class="esc-box"></span>Doxxing</div>
+        <div class="esc-item" data-correct="false"><span class="esc-box"></span>Online stalking</div>
+        <div class="esc-item" data-correct="false"><span class="esc-box"></span>Intimate image abuse</div>
+        <div class="esc-item" data-correct="false"><span class="esc-box"></span>Image-based child abuse</div>
+      </div>
+      <p class="esc-feedback" id="esc-feedback"></p>
+    </div>
+    <button type="button" id="btn-esc-continue" class="btn-primary hidden">CONTINUE</button>
+  </section>
+
+  <section id="screen-payoff" class="screen">
+    <div id="payoff-view" class="closing-view">
+      <p class="closing-line line-1">Platform first. 24 hours.</p>
+      <p class="closing-line line-2">Then osc.gov.sg.</p>
+      <p class="closing-line line-3">You now know something most people your age don't.</p>
+      <div class="osc-permanent">
+        <p class="osc-perm-title">OSC — Online Safety Commission</p>
+        <p class="osc-perm-text">Opened 29 June 2026. Administered by IMDA.</p>
+        <p class="osc-perm-text">Directions to platforms to remove content, disable accounts, and identify anonymous posters.</p>
+        <p class="osc-perm-link">osc.gov.sg</p>
+      </div>
+      <button type="button" id="btn-get-key" class="key-box">GET THE KEY FOR THE NEXT STAGE</button>
+    </div>
+
+    <div id="password-view" class="closing-view hidden">
+      <p class="key-heading">STAGE KEY</p>
+      <p class="key-value">UAPLOM</p>
+      <p class="reset-note">Resets in <span id="reset-countdown">1:00</span></p>
+      <button id="btn-run-again" class="btn-primary">RUN IT AGAIN</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var state = { resetTimerId:null, resetRemaining:60 };
+
+  var waitAnimFrame = null;
+  var waitTimeout1 = null;
+
+  function normalize(v){ return v.trim().toLowerCase().replace(/\s+/g,""); }
+
+  function fmtTime(totalSeconds){
+    var m = Math.floor(totalSeconds/60);
+    var s = totalSeconds%60;
+    return m+":"+(s<10?"0":"")+s;
+  }
+
+  function pad2(n){ return (n<10?"0":"")+n; }
+
+  function showScreen(name){
+    var all = document.querySelectorAll(".screen");
+    for(var i=0;i<all.length;i++){ all[i].classList.remove("active"); }
+    document.getElementById("screen-"+name).classList.add("active");
+  }
+
+  function submitGate(){
+    var input = document.getElementById("gate-input");
+    var val = normalize(input.value);
+    if(val === "tywajf"){
+      showScreen("brief");
+    } else {
+      var wrap = document.getElementById("gate-lock");
+      wrap.classList.add("shake");
+      setTimeout(function(){ wrap.classList.remove("shake"); }, 400);
+      input.value = "";
+    }
+  }
+
+  function showReportStep(n){
+    document.querySelectorAll(".report-step").forEach(function(el){ el.classList.add("hidden"); });
+    document.getElementById("report-step-"+n).classList.remove("hidden");
+  }
+
+  function stopWaitClock(){
+    if(waitAnimFrame){ cancelAnimationFrame(waitAnimFrame); waitAnimFrame = null; }
+    if(waitTimeout1){ clearTimeout(waitTimeout1); waitTimeout1 = null; }
+  }
+
+  function startWaitClock(){
+    stopWaitClock();
+    var clockEl = document.getElementById("wait-clock");
+    var msgEl = document.getElementById("wait-message");
+    var contBtn = document.getElementById("btn-wait-continue");
+    clockEl.textContent = "00:00";
+    msgEl.classList.add("hidden");
+    contBtn.classList.add("hidden");
+
+    var start = null;
+    var duration = 8000;
+
+    function frame(ts){
+      if(start === null) start = ts;
+      var elapsed = ts - start;
+      var progress = Math.min(1, elapsed/duration);
+      var totalMinutes = progress * 1440;
+      var hh = Math.floor(totalMinutes/60);
+      var mm = Math.floor(totalMinutes%60);
+      clockEl.textContent = pad2(hh)+":"+pad2(mm);
+      if(progress < 1){
+        waitAnimFrame = requestAnimationFrame(frame);
+      } else {
+        clockEl.textContent = "24:00";
+        waitTimeout1 = setTimeout(function(){
+          msgEl.classList.remove("hidden");
+          contBtn.classList.remove("hidden");
+        }, 3000);
+      }
+    }
+    waitAnimFrame = requestAnimationFrame(frame);
+  }
+
+  function initEscalation(){
+    document.querySelectorAll(".esc-item").forEach(function(item){
+      item.addEventListener("click", function(){
+        var correct = item.getAttribute("data-correct") === "true";
+        item.classList.add("checked");
+        if(correct){
+          document.getElementById("esc-feedback").textContent = "";
+          document.getElementById("btn-esc-continue").classList.remove("hidden");
+        } else {
+          document.getElementById("esc-feedback").textContent = "Not this one.";
+        }
+      });
+    });
+  }
+
+  function proceedToKey(){
+    document.getElementById("payoff-view").classList.add("hidden");
+    document.getElementById("password-view").classList.remove("hidden");
+    startResetCountdown();
+  }
+
+  function updateResetDisplay(){
+    document.getElementById("reset-countdown").textContent = fmtTime(state.resetRemaining);
+  }
+
+  function startResetCountdown(){
+    state.resetRemaining = 60;
+    updateResetDisplay();
+    state.resetTimerId = setInterval(function(){
+      state.resetRemaining -= 1;
+      updateResetDisplay();
+      if(state.resetRemaining <= 0){
+        clearInterval(state.resetTimerId);
+        state.resetTimerId = null;
+        resetAll();
+      }
+    }, 1000);
+  }
+
+  function resetAll(){
+    if(state.resetTimerId){
+      clearInterval(state.resetTimerId);
+      state.resetTimerId = null;
+    }
+    state.resetRemaining = 60;
+
+    showReportStep(0);
+
+    stopWaitClock();
+    document.getElementById("wait-clock").textContent = "00:00";
+    document.getElementById("wait-message").classList.add("hidden");
+    document.getElementById("btn-wait-continue").classList.add("hidden");
+
+    document.querySelectorAll(".esc-item").forEach(function(item){ item.classList.remove("checked"); });
+    document.getElementById("esc-feedback").textContent = "";
+    document.getElementById("btn-esc-continue").classList.add("hidden");
+
+    document.getElementById("password-view").classList.add("hidden");
+    document.getElementById("payoff-view").classList.remove("hidden");
+    document.getElementById("reset-countdown").textContent = "1:00";
+
+    document.getElementById("gate-input").value = "";
+
+    showScreen("gate");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById("gate-submit").addEventListener("click", submitGate);
+    document.getElementById("gate-input").addEventListener("keydown", function(e){
+      if(e.key === "Enter") submitGate();
+    });
+
+    document.getElementById("btn-start").addEventListener("click", function(){
+      showScreen("report");
+      showReportStep(0);
+    });
+
+    document.getElementById("rp-dots-btn").addEventListener("click", function(){ showReportStep(1); });
+
+    document.getElementById("back-1").addEventListener("click", function(){ showReportStep(0); });
+    document.getElementById("back-2").addEventListener("click", function(){ showReportStep(1); });
+    document.getElementById("back-3").addEventListener("click", function(){ showReportStep(2); });
+    document.getElementById("back-4").addEventListener("click", function(){ showReportStep(3); });
+
+    document.getElementById("opt-report").addEventListener("click", function(){ showReportStep(2); });
+    document.getElementById("opt-cancel").addEventListener("click", function(){ showReportStep(0); });
+    document.getElementById("opt-something-account").addEventListener("click", function(){ showReportStep(3); });
+    document.getElementById("opt-content-type").addEventListener("click", function(){ showReportStep(4); });
+    document.getElementById("opt-harassment").addEventListener("click", function(){ showReportStep(5); });
+
+    document.getElementById("btn-report-submit").addEventListener("click", function(){ showReportStep(6); });
+    document.getElementById("btn-report-continue").addEventListener("click", function(){
+      showScreen("wait");
+      startWaitClock();
+    });
+
+    document.getElementById("btn-wait-continue").addEventListener("click", function(){ showScreen("escalation"); });
+
+    initEscalation();
+    document.getElementById("btn-esc-continue").addEventListener("click", function(){ showScreen("payoff"); });
+
+    document.getElementById("btn-get-key").addEventListener("click", proceedToKey);
+    document.getElementById("btn-run-again").addEventListener("click", resetAll);
+
+    if(location.search.indexOf("reset") !== -1){
+      resetAll();
+    }
+  });
+})();
+</script>
+</body>
+</html>

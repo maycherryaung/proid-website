@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>ZONE 4</title>
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --fg:#FFFFFF;
+    --muted:#8E8E93;
+    --accent:#FF3B30;
+    --border:#2A2A2A;
+    --surface:#1A1A1A;
+    --surface2:#3A3A3A;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--sans);
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button,input,textarea{font-family:inherit;}
+  button{cursor:pointer;background:none;color:inherit;}
+  .hidden{display:none !important;}
+
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+
+  .admin-hotzone{position:fixed;top:0;right:0;width:64px;height:64px;z-index:9999;}
+
+  .screen{display:none;min-height:100vh;}
+  .screen.active{display:block;}
+  #screen-gate.active, #screen-brief.active{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:32px;text-align:center;gap:28px;
+  }
+
+  .brief-text{font-size:1.05rem;line-height:1.8;color:var(--fg);max-width:340px;}
+
+  .btn-primary{
+    border:1px solid var(--fg);
+    color:var(--fg);
+    background:transparent;
+    padding:14px 44px;
+    font-weight:600;
+    font-size:0.85rem;
+    letter-spacing:0.12em;
+    border-radius:0;
+    transition:border-color .15s,color .15s;
+  }
+  .btn-primary:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* gate lock (reused pattern) */
+  .lock{border:1px solid var(--border);padding:16px;width:100%;max-width:300px;}
+  .lock-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+  .lock-row{display:flex;gap:8px;}
+  .lock-input{
+    flex:1;background:transparent;border:1px solid var(--border);color:var(--fg);
+    padding:10px 12px;font-family:var(--mono);font-size:0.95rem;letter-spacing:0.04em;
+    border-radius:0;
+  }
+  .lock-input:focus{outline:none;border-color:var(--fg);}
+  .lock-icon{
+    width:44px;flex-shrink:0;border:1px solid var(--border);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lock-icon svg{width:18px;height:18px;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+  .lock.shake .lock-row{animation:shake .4s;}
+  .lock.shake .lock-input{border-color:var(--accent);}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  /* brief: 1.5s-apart lines */
+  .brief-line{opacity:0;animation:fadeIn 1s ease forwards;max-width:320px;font-size:1.05rem;line-height:1.8;margin:0;}
+  .brief-line-1{animation-delay:.3s;}
+  .brief-line-2{animation-delay:1.8s;}
+  .brief-line-3{animation-delay:3.3s;}
+  #btn-write{opacity:0;animation:fadeIn 1s ease forwards;animation-delay:4.6s;}
+
+  /* compose */
+  #screen-compose.active{
+    display:flex;flex-direction:column;min-height:100vh;padding:32px 20px;gap:16px;
+  }
+  .compose-label{font-size:0.75rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin:0;}
+  .compose-hint{font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 4px;}
+  .compose-textarea{
+    flex:1;min-height:220px;background:transparent;border:1px solid var(--border);color:var(--fg);
+    padding:14px;font-family:var(--sans);font-size:1rem;line-height:1.6;resize:none;border-radius:0;
+  }
+  .compose-textarea:focus{outline:none;border-color:var(--fg);}
+  #btn-send{align-self:center;width:100%;max-width:300px;}
+  #btn-send:disabled{opacity:0.3;cursor:not-allowed;}
+  #btn-send:disabled:hover{border-color:var(--fg);color:var(--fg);}
+
+  /* wall */
+  #screen-wall{padding:32px 16px 60px;min-height:100vh;}
+  .wall-count{font-size:0.85rem;color:var(--muted);text-align:center;margin:0 0 20px;line-height:1.6;}
+  .wall-list{display:flex;flex-direction:column;}
+  .wall-message{
+    padding:14px 4px 14px 10px;border-bottom:1px solid var(--border);font-size:0.88rem;line-height:1.5;
+    border-left:2px solid transparent;
+  }
+  .wall-message.own{
+    border-left-color:var(--accent);
+    opacity:0;animation:fadeIn .8s ease forwards;
+  }
+  #btn-end-challenge{width:100%;max-width:300px;display:block;margin:28px auto 0;}
+  .end-view{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;text-align:center;gap:20px;padding:32px;
+  }
+  .end-line{opacity:0;animation:fadeIn .8s ease forwards;font-size:1.05rem;line-height:1.8;max-width:320px;margin:0;}
+  .reset-note{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:.8s;
+    font-size:0.78rem;color:var(--muted);font-family:var(--mono);margin:0;
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-hotzone" id="admin-hotzone"></div>
+
+<div id="app">
+
+  <section id="screen-gate" class="screen active">
+    <p class="brief-text">ZONE 4 IS LOCKED.<br><br>Enter the key from Stage 3 to continue.</p>
+    <div class="lock" id="gate-lock">
+      <div class="lock-label">STAGE 3 KEY</div>
+      <div class="lock-row">
+        <input type="text" class="lock-input" id="gate-input" placeholder="enter key" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" id="gate-submit" aria-label="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-brief" class="screen">
+    <p class="brief-line brief-line-1">Rachel deactivated her account this morning.</p>
+    <p class="brief-line brief-line-2">She hasn't replied to anyone in three days.</p>
+    <p class="brief-line brief-line-3">You have her number.</p>
+    <button type="button" id="btn-write" class="btn-primary">WRITE TO HER</button>
+  </section>
+
+  <section id="screen-compose" class="screen">
+    <p class="compose-label">To: Rachel</p>
+    <p class="compose-hint">Send a message to reach out to her.</p>
+    <textarea id="compose-text" class="compose-textarea" autocomplete="off" autocapitalize="sentences" spellcheck="false"></textarea>
+    <button type="button" id="btn-send" class="btn-primary" disabled>SEND</button>
+  </section>
+
+  <section id="screen-wall" class="screen">
+    <div id="wall-view">
+      <p class="wall-count" id="wall-count"></p>
+      <div class="wall-list" id="wall-list"></div>
+      <button type="button" id="btn-end-challenge" class="btn-primary">END CHALLENGE</button>
+    </div>
+    <div id="end-view" class="end-view hidden">
+      <p class="end-line">Thanks for participating.</p>
+      <p class="reset-note">Resets in <span id="reset-countdown">1:00</span></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "zone4_messages";
+
+  var SEED_MESSAGES = [
+    "hey. saw what happened. you ok?",
+    "not asking you to talk. just here",
+    "that post was fake and everyone knows it",
+    "come gym tmr?",
+    "thinking of you",
+    "you don't owe anyone an explanation",
+    "screenshot doesn't prove anything lol",
+    "miss seeing you around",
+    "take your time. no rush",
+    "still here whenever",
+    "that whole thing is so unfair",
+    "lmk if u need anything",
+    "momo probably misses you too",
+    "people forget fast. it'll blow over",
+    "you're allowed to be upset",
+    "wish i said something when it happened",
+    "saw jiaqi post about you, she's rooting for you",
+    "the internet has a short memory, promise",
+    "sending good vibes your way",
+    "you're stronger than this",
+    "no pressure to reply",
+    "we go makan when you're ready",
+    "that account got reported btw",
+    "you didn't deserve any of that",
+    "here if you wanna vent",
+    "saw the report went through, hang in there",
+    "not everyone believed it, for what it's worth",
+    "take a break from your phone for a bit",
+    "thinking about you today",
+    "you're missed"
+  ];
+
+  function normalize(v){ return v.trim().toLowerCase().replace(/\s+/g,""); }
+
+  function showScreen(name){
+    var all = document.querySelectorAll(".screen");
+    for(var i=0;i<all.length;i++){ all[i].classList.remove("active"); }
+    document.getElementById("screen-"+name).classList.add("active");
+  }
+
+  function submitGate(){
+    var input = document.getElementById("gate-input");
+    var val = normalize(input.value);
+    if(val === "uaplom"){
+      showScreen("brief");
+    } else {
+      var wrap = document.getElementById("gate-lock");
+      wrap.classList.add("shake");
+      setTimeout(function(){ wrap.classList.remove("shake"); }, 400);
+      input.value = "";
+    }
+  }
+
+  function loadMessages(){
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_MESSAGES));
+      return SEED_MESSAGES.slice();
+    }
+    try {
+      var parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)) return parsed;
+    } catch(e){}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_MESSAGES));
+    return SEED_MESSAGES.slice();
+  }
+
+  function saveMessages(list){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function ordinal(n){
+    var rem100 = n % 100;
+    if(rem100 >= 11 && rem100 <= 13) return n + "th";
+    switch(n % 10){
+      case 1: return n + "st";
+      case 2: return n + "nd";
+      case 3: return n + "rd";
+      default: return n + "th";
+    }
+  }
+
+  function renderWall(highlightNew){
+    var messages = loadMessages();
+    document.getElementById("wall-count").textContent =
+      "You are the " + ordinal(messages.length) + " person to write to Rachel today.";
+    var list = document.getElementById("wall-list");
+    list.innerHTML = "";
+    for(var i = messages.length - 1; i >= 0; i--){
+      var row = document.createElement("div");
+      row.className = "wall-message";
+      row.textContent = messages[i];
+      if(highlightNew && i === messages.length - 1){
+        row.classList.add("own");
+        (function(el){
+          setTimeout(function(){ el.classList.remove("own"); }, 10000);
+        })(row);
+      }
+      list.appendChild(row);
+    }
+  }
+
+  function updateSendState(){
+    var textarea = document.getElementById("compose-text");
+    var btn = document.getElementById("btn-send");
+    btn.disabled = textarea.value.trim().length === 0;
+  }
+
+  function sendMessage(){
+    var textarea = document.getElementById("compose-text");
+    var text = textarea.value.trim();
+    if(text.length === 0) return;
+    var messages = loadMessages();
+    messages.push(text);
+    saveMessages(messages);
+    renderWall(true);
+    showScreen("wall");
+  }
+
+  var endTimerId = null;
+
+  function fmtTime(totalSeconds){
+    var m = Math.floor(totalSeconds/60);
+    var s = totalSeconds%60;
+    return m+":"+(s<10?"0":"")+s;
+  }
+
+  function startEndChallenge(){
+    document.getElementById("wall-view").classList.add("hidden");
+    document.getElementById("end-view").classList.remove("hidden");
+    var remaining = 60;
+    document.getElementById("reset-countdown").textContent = fmtTime(remaining);
+    endTimerId = setInterval(function(){
+      remaining -= 1;
+      document.getElementById("reset-countdown").textContent = fmtTime(remaining);
+      if(remaining <= 0){
+        clearInterval(endTimerId);
+        endTimerId = null;
+        resetSession();
+      }
+    }, 1000);
+  }
+
+  function exportMessages(){
+    var messages = loadMessages();
+    var text = messages.join("\n");
+    var blob = new Blob([text], {type:"text/plain"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "rachel-messages.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function resetSession(){
+    if(endTimerId){
+      clearInterval(endTimerId);
+      endTimerId = null;
+    }
+    document.getElementById("gate-input").value = "";
+    document.getElementById("compose-text").value = "";
+    updateSendState();
+    document.getElementById("end-view").classList.add("hidden");
+    document.getElementById("wall-view").classList.remove("hidden");
+    document.getElementById("reset-countdown").textContent = "1:00";
+    showScreen("gate");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById("gate-submit").addEventListener("click", submitGate);
+    document.getElementById("gate-input").addEventListener("keydown", function(e){
+      if(e.key === "Enter") submitGate();
+    });
+
+    document.getElementById("btn-write").addEventListener("click", function(){ showScreen("compose"); });
+
+    document.getElementById("compose-text").addEventListener("input", updateSendState);
+    document.getElementById("btn-send").addEventListener("click", sendMessage);
+
+    document.getElementById("btn-end-challenge").addEventListener("click", startEndChallenge);
+
+    var tapTimes = [];
+    document.getElementById("admin-hotzone").addEventListener("click", function(){
+      var now = Date.now();
+      tapTimes.push(now);
+      tapTimes = tapTimes.filter(function(t){ return now - t < 1500; });
+      if(tapTimes.length >= 3){
+        tapTimes = [];
+        exportMessages();
+      }
+    });
+
+    if(location.search.indexOf("reset") !== -1){
+      resetSession();
+    }
+  });
+})();
+</script>
+</body>
+</html>
