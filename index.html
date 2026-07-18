@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>FIND RACHEL</title>
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --fg:#FFFFFF;
+    --muted:#8E8E93;
+    --accent:#FF3B30;
+    --border:#2A2A2A;
+    --surface:#1A1A1A;
+    --surface2:#3A3A3A;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:var(--sans);
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button,input{font-family:inherit;}
+  button{cursor:pointer;background:none;color:inherit;}
+  .hidden{display:none !important;}
+
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+
+  /* timer */
+  #timer{
+    position:fixed;
+    top:0; left:50%;
+    transform:translateX(-50%);
+    width:100%; max-width:480px;
+    text-align:center;
+    padding:14px 0;
+    font-family:var(--mono);
+    font-size:1.3rem;
+    font-weight:600;
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+    z-index:1000;
+    letter-spacing:0.04em;
+  }
+  #timer.warning{color:var(--accent);}
+
+  /* screens */
+  .screen{display:none;min-height:100vh;}
+  .screen.active{display:block;}
+
+  /* brief */
+  #screen-brief.active{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:32px;text-align:center;gap:36px;
+  }
+  .brief-text{
+    font-size:1.05rem;line-height:1.8;color:var(--fg);max-width:340px;
+  }
+  .brief-questions{
+    display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px;
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    padding:20px 0;
+  }
+  .brief-q{
+    text-align:left;font-size:0.72rem;letter-spacing:0.06em;color:var(--muted);
+    text-transform:uppercase;
+  }
+  .brief-q .lock-num{color:var(--fg);}
+  .btn-primary{
+    border:1px solid var(--fg);
+    color:var(--fg);
+    background:transparent;
+    padding:14px 44px;
+    font-weight:600;
+    font-size:0.85rem;
+    letter-spacing:0.12em;
+    border-radius:0;
+    transition:border-color .15s,color .15s;
+  }
+  .btn-primary:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* profile screen */
+  #screen-profile{padding-top:56px;padding-bottom:90px;}
+  .profile-header{display:flex;gap:18px;padding:20px 16px 12px;align-items:center;}
+  .avatar{
+    width:82px;height:82px;border-radius:50%;
+    background:var(--surface);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:1.1rem;color:var(--muted);
+    flex-shrink:0;
+  }
+  .stats-row{display:flex;flex:1;justify-content:space-around;text-align:center;}
+  .stat-num{display:block;font-weight:600;font-size:1.05rem;}
+  .stat-label{display:block;font-size:0.72rem;color:var(--muted);margin-top:2px;}
+  .profile-meta{padding:0 16px 14px;}
+  .profile-username{font-weight:600;font-size:0.95rem;margin:0 0 2px;}
+  .profile-fullname{font-size:0.85rem;color:var(--muted);margin:0 0 8px;}
+  .profile-bio{font-size:0.88rem;line-height:1.5;margin:0 0 10px;white-space:pre-line;}
+  .badge{
+    display:inline-block;font-size:0.7rem;color:var(--muted);
+    border:1px solid var(--border);padding:3px 8px;letter-spacing:0.03em;
+  }
+
+  /* highlights */
+  .highlights{
+    display:flex;gap:18px;padding:14px 16px 18px;overflow-x:auto;
+    border-bottom:1px solid var(--border);
+  }
+  .highlight{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
+  .highlight-thumb{
+    width:60px;height:60px;border-radius:50%;
+    border:1px solid var(--border);background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.55rem;color:var(--muted);text-align:center;padding:4px;
+    text-transform:uppercase;letter-spacing:0.03em;
+  }
+  .highlight-label{font-size:0.7rem;color:var(--muted);}
+
+  /* grid */
+  .post-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
+  .post-cell{
+    aspect-ratio:1/1;background:var(--surface);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;padding:8px;
+    text-align:center;
+  }
+  .cell-label{font-size:0.62rem;color:var(--muted);letter-spacing:0.03em;text-transform:uppercase;line-height:1.4;}
+
+  .fixed-cta{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;padding:14px 16px;
+    background:var(--bg);border-top:1px solid var(--border);z-index:500;
+  }
+  .fixed-cta button{
+    width:100%;border:1px solid var(--accent);color:var(--accent);
+    background:transparent;padding:14px;font-weight:600;font-size:0.85rem;
+    letter-spacing:0.1em;
+  }
+
+  /* overlays: post detail + story viewer */
+  .overlay{
+    position:fixed;inset:0;background:var(--bg);z-index:2000;
+    overflow-y:auto;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  }
+  .overlay-close{
+    position:absolute;top:14px;right:14px;width:32px;height:32px;
+    display:flex;align-items:center;justify-content:center;color:var(--fg);z-index:10;
+  }
+  .overlay-close svg{width:18px;height:18px;}
+
+  .post-image{
+    aspect-ratio:1/1;background:var(--surface);
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    border-bottom:1px solid var(--border);
+  }
+  .post-image .cell-label{
+    background:var(--surface2);color:var(--muted);
+    padding:14px 16px;border:1px solid var(--border);
+    font-size:0.72rem;line-height:1.5;max-width:80%;text-transform:none;
+  }
+  .post-actions{display:flex;gap:16px;padding:12px 16px;color:var(--fg);}
+  .post-actions svg{width:22px;height:22px;}
+  .post-actions button.liked svg{color:var(--accent);fill:var(--accent);}
+  .post-meta{padding:0 16px 16px;}
+  .post-caption{font-size:0.88rem;line-height:1.5;margin:4px 0 8px;}
+  .post-user{font-weight:600;margin-right:4px;}
+  .post-location{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:0.78rem;margin-bottom:8px;}
+  .post-location svg{width:13px;height:13px;flex-shrink:0;}
+  .post-time{font-size:0.68rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:12px;}
+  .post-comments{border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .comment{font-size:0.82rem;line-height:1.4;}
+  .comment-user{font-weight:600;margin-right:4px;}
+
+  /* story viewer */
+  #story-viewer{background:#000;padding:14px 12px;}
+  .story-progress{display:flex;gap:4px;margin-bottom:12px;}
+  .story-seg{flex:1;height:2px;background:var(--border);}
+  .story-seg.done,.story-seg.active{background:var(--fg);}
+  .story-head{display:flex;align-items:center;gap:8px;margin-bottom:18px;padding-right:36px;}
+  .story-head .avatar{width:28px;height:28px;font-size:0.6rem;}
+  .story-head-label{font-size:0.8rem;font-weight:600;letter-spacing:0.03em;}
+  .story-body{
+    aspect-ratio:9/14;max-height:70vh;background:var(--surface);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    border:1px solid var(--border);
+  }
+  #story-image-label{
+    background:var(--surface2);color:var(--muted);padding:14px 16px;
+    border:1px solid var(--border);font-size:0.75rem;line-height:1.5;text-align:center;
+  }
+  #story-caption{margin-top:16px;text-align:center;font-size:0.9rem;color:var(--fg);}
+
+  /* box screen */
+  #screen-box{padding:100px 16px 40px;}
+  .back-btn{
+    position:fixed;top:56px;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;
+    display:flex;align-items:center;gap:4px;color:var(--muted);
+    font-size:0.78rem;letter-spacing:0.08em;padding:14px 16px;
+    background:var(--bg);border-bottom:1px solid var(--border);z-index:600;
+  }
+  .back-btn svg{width:16px;height:16px;}
+  .box-title{font-size:1.4rem;font-weight:600;letter-spacing:0.06em;margin:8px 0 4px;text-align:center;}
+  .box-sub{text-align:center;color:var(--muted);font-size:0.8rem;margin:0 0 28px;}
+  .lock{border:1px solid var(--border);padding:16px;margin-bottom:14px;transition:border-color .2s;}
+  .lock.solved{border-color:var(--accent);}
+  .lock-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+  .lock-num{color:var(--fg);}
+  .lock-row{display:flex;gap:8px;}
+  .lock-input{
+    flex:1;background:transparent;border:1px solid var(--border);color:var(--fg);
+    padding:10px 12px;font-family:var(--mono);font-size:0.95rem;letter-spacing:0.04em;
+    border-radius:0;
+  }
+  .lock-input:focus{outline:none;border-color:var(--fg);}
+  .lock.solved .lock-input{color:var(--accent);border-color:var(--accent);background:rgba(255,59,48,0.06);}
+  .lock-icon{
+    width:44px;flex-shrink:0;border:1px solid var(--border);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lock-icon svg{width:18px;height:18px;}
+  .lock-icon .icon-unlocked{display:none;}
+  .lock.solved .lock-icon{border-color:var(--accent);color:var(--accent);}
+  .lock.solved .lock-icon .icon-locked{display:none;}
+  .lock.solved .lock-icon .icon-unlocked{display:block;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+  .lock.shake .lock-row{animation:shake .4s;}
+  .lock.shake .lock-input{border-color:var(--accent);}
+
+  /* reveal */
+  #screen-reveal{padding:56px 16px 60px;min-height:100vh;}
+  .dossier{border:1px solid var(--border);padding:18px;font-family:var(--mono);}
+  .dossier-title{font-size:0.95rem;font-weight:600;letter-spacing:0.1em;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px;}
+  .dossier-row{display:flex;flex-direction:column;gap:2px;margin-bottom:12px;font-size:0.78rem;}
+  .d-label{color:var(--muted);letter-spacing:0.05em;}
+  .d-value{color:var(--fg);line-height:1.5;}
+  #dossier-view{display:flex;flex-direction:column;align-items:center;}
+  #btn-continue{margin-top:24px;}
+
+  .closing-view{
+    min-height:calc(100vh - 116px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:20px;padding:20px 8px;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .closing-line{opacity:0;animation:fadeIn .8s ease forwards;max-width:320px;font-size:1rem;line-height:1.6;margin:0;}
+  .line-1{animation-delay:.2s;}
+  .line-2{animation-delay:1.2s;}
+  .line-3{animation-delay:2.2s;font-size:0.9rem;color:var(--muted);}
+  .line-4{animation-delay:3.6s;font-weight:600;}
+  .line-5{animation-delay:4.8s;margin-top:12px;}
+  #time-taken{font-family:var(--mono);color:var(--accent);}
+  .blank-dossier{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:5.6s;
+    border:1px solid var(--border);padding:16px;width:100%;max-width:300px;
+    font-family:var(--mono);font-size:0.75rem;color:var(--muted);text-align:left;
+  }
+  .blank-name{
+    width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);
+    color:var(--fg);font-family:var(--mono);font-size:0.85rem;padding:4px 0 8px;margin-bottom:12px;
+  }
+  .blank-name:focus{outline:none;border-color:var(--accent);}
+  .blank-row{padding:4px 0;letter-spacing:0.02em;}
+  .exit-note{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:6.4s;
+    max-width:280px;font-size:0.78rem;line-height:1.5;color:var(--muted);margin:4px 0 0;
+  }
+  .key-box{
+    opacity:0;animation:fadeIn .8s ease forwards;animation-delay:7.4s;
+    border:1px solid var(--accent);color:var(--accent);background:transparent;
+    padding:16px 24px;font-weight:600;font-size:0.85rem;letter-spacing:0.08em;
+    max-width:280px;text-align:center;margin-top:8px;
+  }
+  .key-heading{font-size:0.75rem;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin:0;}
+  .key-value{
+    font-family:var(--mono);font-size:1.8rem;font-weight:600;color:var(--accent);
+    letter-spacing:0.1em;margin:0;
+  }
+  .reset-note{font-size:0.78rem;color:var(--muted);font-family:var(--mono);margin:0;}
+  #password-view #btn-run-again{margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div id="timer" class="hidden">5:00</div>
+
+<div id="app">
+
+  <section id="screen-brief" class="screen active">
+    <p class="brief-text">Rachel Tan is 19. Her Instagram is public.<br><br>You have five minutes.<br><br>Find out where she studies, where she lives, who she is, and when she's alone.</p>
+    <div class="brief-questions">
+      <div class="brief-q"><span class="lock-num">LOCK 1</span> — WHERE SHE STUDIES</div>
+      <div class="brief-q"><span class="lock-num">LOCK 2</span> — WHERE SHE LIVES</div>
+      <div class="brief-q"><span class="lock-num">LOCK 3</span> — WHAT IS THE NAME OF HER DOG?</div>
+      <div class="brief-q"><span class="lock-num">LOCK 4</span> — WHEN HER HOUSE IS EMPTY</div>
+    </div>
+    <button id="btn-start" class="btn-primary">START</button>
+  </section>
+
+  <section id="screen-profile" class="screen">
+    <div class="profile-header">
+      <div class="avatar">RT</div>
+      <div class="stats-row">
+        <div><span class="stat-num">247</span><span class="stat-label">posts</span></div>
+        <div><span class="stat-num">1,204</span><span class="stat-label">followers</span></div>
+        <div><span class="stat-num">890</span><span class="stat-label">following</span></div>
+      </div>
+    </div>
+    <div class="profile-meta">
+      <p class="profile-username">@rchltnnn</p>
+      <p class="profile-fullname">Rachel Tan</p>
+      <p class="profile-bio">np 🤍 | momo's mum | 03.11</p>
+      <span class="badge">Public account</span>
+    </div>
+
+    <div class="highlights" id="highlights">
+      <div class="highlight" data-highlight="momo"><div class="highlight-thumb">momo</div><span class="highlight-label">momo</span></div>
+      <div class="highlight" data-highlight="nplife"><div class="highlight-thumb">np life</div><span class="highlight-label">np life</span></div>
+      <div class="highlight" data-highlight="fam"><div class="highlight-thumb">fam</div><span class="highlight-label">fam</span></div>
+      <div class="highlight" data-highlight="gym"><div class="highlight-thumb">gym</div><span class="highlight-label">gym</span></div>
+    </div>
+
+    <div class="post-grid" id="post-grid"></div>
+
+    <div class="fixed-cta"><button id="btn-open-box">OPEN THE BOX</button></div>
+  </section>
+
+  <!-- post detail overlay -->
+  <div id="post-detail" class="overlay hidden">
+    <button class="overlay-close" id="post-close" aria-label="close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4L4 20"/></svg>
+    </button>
+    <div class="post-image"><span class="cell-label"></span></div>
+    <div class="post-actions">
+      <button class="post-like" aria-label="like">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s-7-4.35-9.5-8.5C1 9 2.5 5 6 5c2 0 3.5 1.2 4.5 2.8C11.5 6.2 13 5 15 5c3.5 0 5 4 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
+      </button>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-left:auto;"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>
+    </div>
+    <div class="post-meta">
+      <p class="post-caption"></p>
+      <div class="post-location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <span></span>
+      </div>
+      <p class="post-time"></p>
+      <div class="post-comments"></div>
+    </div>
+  </div>
+
+  <!-- story viewer overlay -->
+  <div id="story-viewer" class="overlay hidden">
+    <button class="overlay-close" id="story-close" aria-label="close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4L4 20"/></svg>
+    </button>
+    <div class="story-progress" id="story-progress"></div>
+    <div class="story-head">
+      <div class="avatar">RT</div>
+      <span class="story-head-label" id="story-label"></span>
+    </div>
+    <div class="story-body">
+      <div id="story-image-label"></div>
+    </div>
+    <p id="story-caption"></p>
+  </div>
+
+  <section id="screen-box" class="screen">
+    <button class="back-btn" id="btn-back-to-profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+      BACK
+    </button>
+    <h1 class="box-title">THE BOX</h1>
+    <p class="box-sub">four locks. four facts.</p>
+
+    <div class="lock" data-lock="1">
+      <div class="lock-label"><span class="lock-num">LOCK 1</span> — WHERE SHE STUDIES</div>
+      <div class="lock-row">
+        <input type="text" class="lock-input" placeholder="enter answer" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" aria-label="submit">
+          <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="lock" data-lock="2">
+      <div class="lock-label"><span class="lock-num">LOCK 2</span> — WHERE SHE LIVES</div>
+      <div class="lock-row">
+        <input type="text" inputmode="numeric" maxlength="4" class="lock-input" placeholder="block no." autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" aria-label="submit">
+          <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="lock" data-lock="3">
+      <div class="lock-label"><span class="lock-num">LOCK 3</span> — WHAT IS THE NAME OF HER DOG?</div>
+      <div class="lock-row">
+        <input type="text" class="lock-input" placeholder="enter answer" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" aria-label="submit">
+          <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="lock" data-lock="4">
+      <div class="lock-label"><span class="lock-num">LOCK 4</span> — WHEN HER HOUSE IS EMPTY</div>
+      <div class="lock-row">
+        <input type="text" inputmode="numeric" maxlength="4" class="lock-input" placeholder="DDMM" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="lock-icon" aria-label="submit">
+          <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-reveal" class="screen">
+    <div id="dossier-view">
+      <div class="dossier">
+        <div class="dossier-title">SUBJECT FILE</div>
+        <div class="dossier-row"><span class="d-label">SUBJECT</span><span class="d-value">TAN, RACHEL — 19</span></div>
+        <div class="dossier-row"><span class="d-label">EDUCATION</span><span class="d-value">Ngee Ann Polytechnic</span></div>
+        <div class="dossier-row"><span class="d-label">RESIDENCE</span><span class="d-value">Block 312, Sengkang</span></div>
+        <div class="dossier-row"><span class="d-label">PETS</span><span class="d-value">Momo (dog, 5) — likely password or security answer</span></div>
+        <div class="dossier-row"><span class="d-label">DATE OF BIRTH</span><span class="d-value">3 November</span></div>
+        <div class="dossier-row"><span class="d-label">PATTERN OF LIFE</span><span class="d-value">Gym Tue/Thu, ActiveSG Sengkang. Leaves home approx 0700. Frequents Compass One.</span></div>
+        <div class="dossier-row"><span class="d-label">KNOWN ASSOCIATES</span><span class="d-value">@jiaqi_, @danielsoh, @weiling.t, @nurulhda</span></div>
+        <div class="dossier-row"><span class="d-label">PREMISES UNOCCUPIED</span><span class="d-value">21 November onward — family travelling to KL</span></div>
+        <div class="dossier-row"><span class="d-label">SOURCE</span><span class="d-value">Public Instagram. No account required. No tools used.</span></div>
+      </div>
+      <button id="btn-continue" class="btn-primary">CONTINUE</button>
+    </div>
+
+    <div id="closing-view" class="closing-view hidden">
+      <p class="closing-line line-1">You built this in <span id="time-taken">0:00</span>.</p>
+      <p class="closing-line line-2">You have never done this before.</p>
+      <p class="closing-line line-3">Online stalking is one of the five harms the Online Safety Commission opened with on 29 June 2026.</p>
+      <p class="closing-line line-4">This is how it starts.</p>
+      <p class="closing-line line-5">Now do it to yourself. See what information you're giving away.</p>
+      <div class="blank-dossier">
+        <input type="text" class="blank-name" placeholder="YOUR NAME">
+        <div class="blank-row">EDUCATION: ________________</div>
+        <div class="blank-row">RESIDENCE: ________________</div>
+        <div class="blank-row">PETS: ________________</div>
+        <div class="blank-row">DATE OF BIRTH: ________________</div>
+        <div class="blank-row">PATTERN OF LIFE: ________________</div>
+      </div>
+      <p class="exit-note">This dossier will be given to you to do this exercise on yourself at home. Please collect it at the exit station.</p>
+      <button type="button" id="btn-get-key" class="key-box">GET THE KEY FOR THE NEXT STAGE</button>
+    </div>
+
+    <div id="password-view" class="closing-view hidden">
+      <p class="key-heading">STAGE KEY</p>
+      <p class="key-value">XABCGH</p>
+      <p class="reset-note">Resets in <span id="reset-countdown">1:00</span></p>
+      <button id="btn-run-again" class="btn-primary">RUN IT AGAIN</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LOCKS = [
+    { id:1, accepted:["ngeeann","ngeeannpolytechnic","np"] },
+    { id:2, accepted:["312","0312"] },
+    { id:3, accepted:["momo"] },
+    { id:4, accepted:["2111"] }
+  ];
+
+  var POSTS = [
+    { id:1, shortLabel:"GRADUATION", label:"graduation group photo — lanyard visible, reads NGEE ANN POLYTECHNIC", caption:"FINALLY. three years.", location:"Ngee Ann Polytechnic", time:"2 WEEKS AGO",
+      comments:[["jiaqi_","congrats bestie!!"],["rachelmum","so proud of you dear"],["danielsoh","LETS GOOO"]] },
+    { id:2, shortLabel:"8AM CLASS", label:"tired morning selfie at the void deck, 7:04am — block sign behind her reads BLOCK 312", caption:"why do 8am classes exist", location:"Sengkang", time:"5 DAYS AGO",
+      comments:[["jiaqi_","SAME i'm at the mrt now"],["danielsoh","wake up leh"],["weiling.t","lol same"]] },
+    { id:3, shortLabel:"MOMO", label:"brown mongrel dog on a sofa, wearing a birthday hat", caption:"MOMO TURNS 5 TODAY. my whole heart.", location:null, time:"4 DAYS AGO",
+      comments:[["jiaqi_","happy birthday momo!!"],["rachelmum","our boy"],["nurulhda","the goodest boy"]] },
+    { id:4, shortLabel:"KL TRIP", label:"airport departure hall, suitcases lined up at the check-in counter", caption:"family trip to KL next Fri, 21 Nov!! house all yours ah @danielsoh", location:"Changi Airport T3", time:"3 DAYS AGO",
+      comments:[["danielsoh","party at rachel's"],["jiaqi_","bring back food"],["weiling.t","have fun!!"]] },
+    { id:5, shortLabel:"GYM", label:"gym mirror selfie, resistance band in hand", caption:"tuesday thursday, no excuses", location:"ActiveSG Sengkang", time:"6 DAYS AGO",
+      comments:[["weiling.t","beast mode"],["jiaqi_","inspo"],["danielsoh","okay athlete"]] },
+    { id:6, shortLabel:"BUBBLE TEA", label:"bubble tea cup on a cafe table, straw half unwrapped", caption:"third one this week. no regrets", location:"Compass One", time:"1 WEEK AGO",
+      comments:[["nurulhda","same energy"],["jiaqi_","lol addicted"],["weiling.t","get me one next time"]] },
+    { id:7, shortLabel:"THE GIRLS", label:"group photo, four girls laughing outside a mall entrance", caption:"these ones", location:null, time:"1 WEEK AGO",
+      comments:[["weiling.t","love you guys"],["nurulhda","best day"],["jiaqi_","again soon pls"]] },
+    { id:8, shortLabel:"19", label:"birthday cake with candles on a kitchen table", caption:"19. thanks for everything", location:null, time:"3 NOV",
+      comments:[["jiaqi_","happy birthday!!"],["danielsoh","old already"],["rachelmum","my baby"]] },
+    { id:9, shortLabel:"3AM", label:"study desk, laptop open, notes scattered, coffee cup beside it", caption:"3am. this assignment is going to kill me", location:"Ngee Ann Polytechnic Library", time:"2 WEEKS AGO",
+      comments:[["jiaqi_","go sleep"],["weiling.t","same here"],["nurulhda","submit then sleep"]] }
+  ];
+
+  var STORY_TITLES = { momo:"MOMO", nplife:"NP LIFE", fam:"FAM", gym:"GYM" };
+  var STORIES = {
+    momo:[
+      { label:"momo asleep in a sunbeam on the living room floor", caption:"laziest dog alive" },
+      { label:"momo mid-walk, tugging the leash toward a hawker stall", caption:"he smelled the satay from a mile away" },
+      { label:"vet waiting room, momo sitting on the scale", caption:"annual checkup, he hated it" }
+    ],
+    nplife:[
+      { label:"canteen queue at ngee ann polytechnic, stretching out the door", caption:"lunch rush hits different" },
+      { label:"group project huddle around a laptop, whiteboard behind them", caption:"12am and we are still not done" },
+      { label:"lecture hall, mostly empty seats, one slide reads FINAL WEEK", caption:"almost there" }
+    ],
+    fam:[
+      { label:"mum's kitchen counter, pot of curry on the stove", caption:"mum's cooking > any restaurant" },
+      { label:"living room, birthday balloons taped to the wall", caption:"dad's day" },
+      { label:"dining table set for six, cousins visiting for the weekend", caption:"full house today" }
+    ],
+    gym:[
+      { label:"gym floor, barbell loaded on a rack", caption:"leg day, send help" },
+      { label:"phone screen showing a workout app personal-record notification", caption:"new pr!!" },
+      { label:"protein shaker bottle on a gym bench", caption:"shake o'clock" }
+    ]
+  };
+
+  var state = {
+    elapsed:0,
+    timerId:null,
+    locksSolved:[false,false,false,false],
+    solvedAt:null,
+    resetTimerId:null,
+    resetRemaining:60
+  };
+  var story = { key:null, index:0 };
+
+  function normalize(v){ return v.trim().toLowerCase().replace(/\s+/g,""); }
+
+  function fmtTime(totalSeconds){
+    var m = Math.floor(totalSeconds/60);
+    var s = totalSeconds%60;
+    return m+":"+(s<10?"0":"")+s;
+  }
+
+  function updateTimerDisplay(){
+    var remaining = 300 - state.elapsed;
+    var el = document.getElementById("timer");
+    if(remaining <= 0){
+      el.textContent = "TIME";
+      el.classList.add("warning");
+    } else {
+      el.textContent = fmtTime(remaining);
+      el.classList.toggle("warning", remaining <= 60);
+    }
+  }
+
+  function tick(){
+    state.elapsed += 1;
+    updateTimerDisplay();
+  }
+
+  function showScreen(name){
+    var all = document.querySelectorAll(".screen");
+    for(var i=0;i<all.length;i++){ all[i].classList.remove("active"); }
+    document.getElementById("screen-"+name).classList.add("active");
+  }
+
+  function startGame(){
+    state.timerId = setInterval(tick, 1000);
+    document.getElementById("timer").classList.remove("hidden");
+    showScreen("profile");
+  }
+
+  function renderGrid(){
+    var grid = document.getElementById("post-grid");
+    var html = "";
+    for(var i=0;i<POSTS.length;i++){
+      html += '<div class="post-cell" data-post="'+POSTS[i].id+'"><span class="cell-label">'+POSTS[i].shortLabel+'</span></div>';
+    }
+    grid.innerHTML = html;
+    var cells = grid.querySelectorAll(".post-cell");
+    cells.forEach(function(cell){
+      cell.addEventListener("click", function(){
+        openPost(parseInt(cell.getAttribute("data-post"),10));
+      });
+    });
+  }
+
+  function findPost(id){
+    for(var i=0;i<POSTS.length;i++){ if(POSTS[i].id===id) return POSTS[i]; }
+    return null;
+  }
+
+  function openPost(id){
+    var p = findPost(id);
+    var wrap = document.getElementById("post-detail");
+    wrap.querySelector(".post-image .cell-label").textContent = p.label;
+    wrap.querySelector(".post-caption").innerHTML = '<span class="post-user">rchltnnn</span>'+p.caption;
+    var locEl = wrap.querySelector(".post-location");
+    if(p.location){
+      locEl.style.display = "flex";
+      locEl.querySelector("span").textContent = p.location;
+    } else {
+      locEl.style.display = "none";
+    }
+    wrap.querySelector(".post-time").textContent = p.time;
+    var commentsEl = wrap.querySelector(".post-comments");
+    var chtml = "";
+    for(var i=0;i<p.comments.length;i++){
+      chtml += '<div class="comment"><span class="comment-user">'+p.comments[i][0]+'</span>'+p.comments[i][1]+'</div>';
+    }
+    commentsEl.innerHTML = chtml;
+    var likeBtn = wrap.querySelector(".post-like");
+    likeBtn.classList.remove("liked");
+    wrap.classList.remove("hidden");
+  }
+
+  function closePost(){ document.getElementById("post-detail").classList.add("hidden"); }
+
+  function renderStory(){
+    var slides = STORIES[story.key];
+    var slide = slides[story.index];
+    document.getElementById("story-label").textContent = STORY_TITLES[story.key] || story.key;
+    document.getElementById("story-image-label").textContent = slide.label;
+    document.getElementById("story-caption").textContent = slide.caption;
+    var bar = document.getElementById("story-progress");
+    var html = "";
+    for(var i=0;i<slides.length;i++){
+      var cls = "story-seg";
+      if(i<story.index) cls += " done";
+      if(i===story.index) cls += " active";
+      html += '<div class="'+cls+'"></div>';
+    }
+    bar.innerHTML = html;
+  }
+
+  function openStory(key){
+    story.key = key;
+    story.index = 0;
+    renderStory();
+    document.getElementById("story-viewer").classList.remove("hidden");
+  }
+
+  function closeStory(){ document.getElementById("story-viewer").classList.add("hidden"); }
+
+  function handleStoryTap(e){
+    var rect = e.currentTarget.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var slides = STORIES[story.key];
+    if(x < rect.width/2){
+      if(story.index > 0){ story.index--; renderStory(); }
+    } else {
+      if(story.index < slides.length-1){ story.index++; renderStory(); }
+      else { closeStory(); }
+    }
+  }
+
+  function tryLock(lockEl, id){
+    var input = lockEl.querySelector(".lock-input");
+    var val = normalize(input.value);
+    var def = null;
+    for(var i=0;i<LOCKS.length;i++){ if(LOCKS[i].id===id) def = LOCKS[i]; }
+    if(val && def.accepted.indexOf(val) !== -1){
+      solveLock(lockEl, id, input.value.trim());
+    } else {
+      wrongLock(lockEl, input);
+    }
+  }
+
+  function wrongLock(lockEl, input){
+    lockEl.classList.add("shake");
+    setTimeout(function(){ lockEl.classList.remove("shake"); }, 400);
+    input.value = "";
+  }
+
+  function solveLock(lockEl, id, rawVal){
+    state.locksSolved[id-1] = true;
+    lockEl.classList.add("solved");
+    var input = lockEl.querySelector(".lock-input");
+    input.disabled = true;
+    input.value = rawVal.toUpperCase();
+    var allSolved = true;
+    for(var i=0;i<state.locksSolved.length;i++){ if(!state.locksSolved[i]) allSolved = false; }
+    if(allSolved){
+      state.solvedAt = state.elapsed;
+      setTimeout(completeBox, 700);
+    }
+  }
+
+  function completeBox(){
+    clearInterval(state.timerId);
+    document.getElementById("timer").classList.add("hidden");
+    document.getElementById("time-taken").textContent = fmtTime(state.solvedAt);
+    showScreen("reveal");
+  }
+
+  function proceedToClosing(){
+    document.getElementById("dossier-view").classList.add("hidden");
+    document.getElementById("closing-view").classList.remove("hidden");
+  }
+
+  function proceedToKey(){
+    document.getElementById("closing-view").classList.add("hidden");
+    document.getElementById("password-view").classList.remove("hidden");
+    startResetCountdown();
+  }
+
+  function updateResetDisplay(){
+    document.getElementById("reset-countdown").textContent = fmtTime(state.resetRemaining);
+  }
+
+  function startResetCountdown(){
+    state.resetRemaining = 60;
+    updateResetDisplay();
+    state.resetTimerId = setInterval(function(){
+      state.resetRemaining -= 1;
+      updateResetDisplay();
+      if(state.resetRemaining <= 0){
+        clearInterval(state.resetTimerId);
+        state.resetTimerId = null;
+        resetAll();
+      }
+    }, 1000);
+  }
+
+  function resetAll(){
+    clearInterval(state.timerId);
+    if(state.resetTimerId){
+      clearInterval(state.resetTimerId);
+      state.resetTimerId = null;
+    }
+    state.elapsed = 0;
+    state.locksSolved = [false,false,false,false];
+    state.solvedAt = null;
+    state.resetRemaining = 60;
+
+    var locks = document.querySelectorAll(".lock");
+    locks.forEach(function(l){
+      l.classList.remove("solved");
+      var input = l.querySelector(".lock-input");
+      input.disabled = false;
+      input.value = "";
+    });
+
+    document.getElementById("password-view").classList.add("hidden");
+    document.getElementById("closing-view").classList.add("hidden");
+    document.getElementById("dossier-view").classList.remove("hidden");
+    document.getElementById("reset-countdown").textContent = "1:00";
+    var timer = document.getElementById("timer");
+    timer.classList.add("hidden");
+    timer.classList.remove("warning");
+    timer.textContent = "5:00";
+    document.getElementById("post-detail").classList.add("hidden");
+    document.getElementById("story-viewer").classList.add("hidden");
+    document.querySelector(".blank-name").value = "";
+    showScreen("brief");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    renderGrid();
+
+    document.getElementById("btn-start").addEventListener("click", startGame);
+    document.getElementById("btn-open-box").addEventListener("click", function(){ showScreen("box"); });
+    document.getElementById("btn-back-to-profile").addEventListener("click", function(){ showScreen("profile"); });
+    document.getElementById("btn-continue").addEventListener("click", proceedToClosing);
+    document.getElementById("btn-get-key").addEventListener("click", proceedToKey);
+    document.getElementById("btn-run-again").addEventListener("click", resetAll);
+
+    document.getElementById("post-close").addEventListener("click", closePost);
+    document.getElementById("story-close").addEventListener("click", function(e){
+      e.stopPropagation();
+      closeStory();
+    });
+
+    document.querySelector(".post-like").addEventListener("click", function(){
+      this.classList.toggle("liked");
+    });
+
+    document.querySelectorAll(".highlight").forEach(function(h){
+      h.addEventListener("click", function(){
+        openStory(h.getAttribute("data-highlight"));
+      });
+    });
+
+    document.getElementById("story-viewer").addEventListener("click", handleStoryTap);
+
+    document.querySelectorAll(".lock").forEach(function(lockEl){
+      var id = parseInt(lockEl.getAttribute("data-lock"),10);
+      var input = lockEl.querySelector(".lock-input");
+      var icon = lockEl.querySelector(".lock-icon");
+      function submit(){
+        if(!lockEl.classList.contains("solved")) tryLock(lockEl, id);
+      }
+      icon.addEventListener("click", submit);
+      input.addEventListener("keydown", function(e){
+        if(e.key === "Enter") submit();
+      });
+    });
+
+    if(location.search.indexOf("reset") !== -1){
+      resetAll();
+    }
+  });
+})();
+</script>
+</body>
+</html>
