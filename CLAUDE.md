@@ -24,6 +24,16 @@ None — open `index.html` directly in a browser. No build/test tooling.
 ## Files
 - `index.html` — the entire site (structure, styles, and logic all inline).
 
+## Git workflow
+- Repo: private GitHub repo `maycherryaung/proid-website`, remote `origin`,
+  default branch `main`.
+- **Standing instruction: when the user says "commit to GitHub" (or a clear
+  variant of that phrase) in this project, stage all changes, write a
+  concise commit message describing what changed, commit, and `git push` to
+  `origin main` — without asking for confirmation first.** This is
+  pre-authorized here per the user's explicit request, overriding the
+  normal default of confirming before every push.
+
 ## Notes
 - Look: `#0A0A0A` background, `#FFFFFF`/`#8E8E93` text, single `#FF3B30` accent,
   `#2A2A2A` 1px borders, sharp corners (4px max), system font + monospace for
